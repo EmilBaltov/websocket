@@ -1,3 +1,21 @@
+var stompClient = null;
+
+$(document).ready(function() {
+    console.log("Index page is ready");
+    connectToOurWebSocket();
+});
+
+function connectToOurWebSocket() {
+    var socket = new SockJS('/our-websocket');
+    stompClient = Stomp.over(socket);
+    stompClient.connect({}, function (frame) {
+        console.log('Connected: ' + frame);
+        stompClient.subscribe('/topic/messages', function (message) {
+            outputConsoleMessage(JSON.parse(message.body).content);
+        });
+    });
+}
+
 //open websocket connection
 function openWebSocket() 
 {
@@ -81,3 +99,6 @@ function outputConsoleMessage(message)
   consoleOutput.innerHTML +=  msg  + "<br/>";
   consoleOutput.scrollTop = consoleOutput.scrollHeight;
 }
+
+
+

@@ -1,6 +1,7 @@
 package com.example.websockets.client;
 
 import com.example.websockets.model.OrderBookLiveUpdate;
+import com.example.websockets.service.WSService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -35,9 +36,11 @@ public class WebSocketClient implements WebSocket.Listener {
             Map.of("asks", new ArrayDeque<>(), "bids", new ArrayDeque<>()));
 
     private final CountDownLatch countDownLatch;
+    private final WSService wsService;
 
-    public WebSocketClient(CountDownLatch latch) {
+    public WebSocketClient(CountDownLatch latch, WSService wsService) {
         this.countDownLatch = latch;
+        this.wsService = wsService;
     }
 
     @Override
@@ -53,7 +56,7 @@ public class WebSocketClient implements WebSocket.Listener {
         String inputData = data.toString();
         if (inputData.contains("\"a\"") || inputData.contains("\"b\"")) {
             Map<String, Deque<OrderBookLiveUpdate>> dequeMap = updateDequeMap(inputData);
-            printCurrentResultSorted(dequeMap);
+            wsService.notifyFrontend(printCurrentResultSorted(dequeMap));
         } else {
             logger.info(data.toString());
         }
@@ -124,7 +127,7 @@ public class WebSocketClient implements WebSocket.Listener {
         return orderBookFieldsString;
     }
 
-    private void printCurrentResultSorted(Map<String, Deque<OrderBookLiveUpdate>> dequeMap) {
+    private String printCurrentResultSorted(Map<String, Deque<OrderBookLiveUpdate>> dequeMap) {
 
         List<OrderBookLiveUpdate> orderBookSinglesSortAsks = dequeMap.get(ASKS)
                 .stream()
@@ -144,9 +147,11 @@ public class WebSocketClient implements WebSocket.Listener {
         OrderBookLiveUpdate bestBid = orderBookSinglesSortBids.iterator().hasNext() ?
                 orderBookSinglesSortBids.iterator().next() : null;
 
-        logger.info(getOrderBookBuilderToPrint(
+        String notification = getOrderBookBuilderToPrint(
                 dequeMap, orderBookSinglesSortAsks, orderBookSinglesSortBids, bestAsk, bestBid)
-                .toString());
+                .toString();
+        logger.info(notification);
+        return notification;
     }
 
     private StringBuilder getOrderBookBuilderToPrint(
